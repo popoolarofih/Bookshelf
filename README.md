@@ -2,8 +2,6 @@
 
 A modern, full-stack web application for tracking your personal reading journey. Built with Next.js 14, Supabase, and TailwindCSS.
 
-![BookShelf App](https://via.placeholder.com/800x400/3B82F6/FFFFFF?text=BookShelf+App)
-
 ## ✨ Features
 
 ### 🔍 Book Discovery
@@ -233,10 +231,6 @@ The app can be deployed to any platform that supports Next.js:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - **Google Books API** - For providing access to millions of books
@@ -245,24 +239,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Lucide** - For the amazing icon library
 - **Vercel** - For the seamless deployment platform
 
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [Issues](https://github.com/yourusername/bookshelf-app/issues) page
-2. Create a new issue with detailed information
-3. Contact support at support@bookshelf.com
-
-## 🔮 Future Enhancements
-
-- **User Authentication**: Multi-user support with NextAuth
-- **Book Reviews**: Personal book reviews and ratings
-- **Reading Goals**: Annual reading goal tracking
-- **Book Recommendations**: AI-powered book suggestions
-- **Social Features**: Share reading lists with friends
-- **Export/Import**: Backup and restore book collections
-- **Dark Mode**: Theme switching capability
-- **Mobile App**: React Native companion app
 
 ---
 
