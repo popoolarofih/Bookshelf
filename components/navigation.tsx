@@ -1,54 +1,54 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { Button } from "@/components/ui/button"
+import { UserNav } from "@/components/user-nav"
 import { BookOpen, Search, Library } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 export function Navigation() {
-  const pathname = usePathname()
-
-  const navItems = [
-    {
-      href: "/search",
-      label: "Search Books",
-      icon: Search,
-    },
-    {
-      href: "/shelf",
-      label: "My Shelf",
-      icon: Library,
-    },
-  ]
+  const { data: session, status } = useSession()
 
   return (
-    <nav className="bg-white shadow-lg border-b border-blue-100">
+    <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center space-x-2">
-            <BookOpen className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-blue-900">BookShelf</span>
-          </Link>
+          <div className="flex items-center space-x-8">
+            <Link href="/" className="flex items-center space-x-2">
+              <BookOpen className="h-6 w-6 text-blue-600" />
+              <span className="font-bold text-xl text-gray-900">BookShelf</span>
+            </Link>
 
-          <div className="flex space-x-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              return (
+            {session && (
+              <div className="hidden md:flex items-center space-x-6">
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors font-medium",
-                    pathname === item.href
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-600 hover:bg-blue-50 hover:text-blue-600",
-                  )}
+                  href="/search"
+                  className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  <Search className="h-4 w-4" />
+                  <span>Search</span>
                 </Link>
-              )
-            })}
+                <Link
+                  href="/shelf"
+                  className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  <Library className="h-4 w-4" />
+                  <span>My Shelf</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {status === "loading" ? (
+              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+            ) : session ? (
+              <UserNav />
+            ) : (
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/auth/signin">Sign In</Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>

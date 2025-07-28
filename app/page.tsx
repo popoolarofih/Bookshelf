@@ -1,103 +1,129 @@
+"use client"
+
+import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { BookOpen, Search, Library, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { BookOpen, Search, Library, Users, Star, TrendingUp } from "lucide-react"
 
 export default function HomePage() {
+  const { data: session } = useSession()
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       {/* Hero Section */}
-      <div className="text-center mb-12">
+      <div className="text-center py-16">
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-blue-600 rounded-full">
-            <BookOpen className="h-12 w-12 text-white" />
-          </div>
+          <BookOpen className="h-16 w-16 text-blue-600" />
         </div>
-        <h1 className="text-4xl font-bold text-blue-900 mb-4">Welcome to BookShelf</h1>
+        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+          Welcome to <span className="text-blue-600">BookShelf</span>
+        </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Your personal book tracking companion. Discover new books, organize your reading list, and track your reading
-          journey all in one place.
+          Your personal book tracking companion. Discover, organize, and track your reading journey with ease.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+        {session ? (
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/search">
+                <Search className="mr-2 h-5 w-5" />
+                Search Books
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link href="/shelf">
+                <Library className="mr-2 h-5 w-5" />
+                My Shelf
+              </Link>
+            </Button>
+          </div>
+        ) : (
           <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-            <Link href="/search">
-              <Search className="mr-2 h-5 w-5" />
-              Search Books
-            </Link>
+            <Link href="/auth/signin">Get Started</Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="border-blue-300 text-blue-600 hover:bg-blue-50 bg-transparent"
-          >
-            <Link href="/shelf">
-              <Library className="mr-2 h-5 w-5" />
-              View My Shelf
-            </Link>
-          </Button>
-        </div>
+        )}
       </div>
 
-      {/* Features */}
-      <div className="grid md:grid-cols-3 gap-6 mb-12">
-        <Card className="book-card">
-          <CardHeader className="text-center">
-            <div className="mx-auto p-3 bg-blue-100 rounded-full w-fit mb-4">
-              <Search className="h-6 w-6 text-blue-600" />
-            </div>
-            <CardTitle className="text-blue-900">Discover Books</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Search millions of books using the Google Books API. Find your next great read with detailed information
-              and reviews.
-            </CardDescription>
-          </CardContent>
-        </Card>
+      {/* Features Section */}
+      <div className="py-16">
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          Everything you need to track your reading
+        </h2>
 
-        <Card className="book-card">
-          <CardHeader className="text-center">
-            <div className="mx-auto p-3 bg-green-100 rounded-full w-fit mb-4">
-              <Library className="h-6 w-6 text-green-600" />
-            </div>
-            <CardTitle className="text-blue-900">Organize Your Shelf</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Keep track of books you want to read, are currently reading, or have finished. Your personal library,
-              organized.
-            </CardDescription>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Card>
+            <CardHeader>
+              <Search className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Discover Books</CardTitle>
+              <CardDescription>
+                Search millions of books using the Google Books API and find your next great read.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-        <Card className="book-card">
-          <CardHeader className="text-center">
-            <div className="mx-auto p-3 bg-yellow-100 rounded-full w-fit mb-4">
-              <Star className="h-6 w-6 text-yellow-600" />
-            </div>
-            <CardTitle className="text-blue-900">Track Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Monitor your reading journey with status updates and see your reading habits evolve over time.
-            </CardDescription>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <Library className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Organize Your Shelf</CardTitle>
+              <CardDescription>
+                Keep track of books you want to read, are currently reading, or have finished.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <TrendingUp className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Track Progress</CardTitle>
+              <CardDescription>
+                Monitor your reading habits and see your progress over time with detailed statistics.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Users className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Personal Collection</CardTitle>
+              <CardDescription>
+                Build your personal library with secure user authentication and data protection.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Star className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Beautiful Interface</CardTitle>
+              <CardDescription>
+                Enjoy a clean, modern interface designed for book lovers with responsive design.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <BookOpen className="h-8 w-8 text-blue-600 mb-2" />
+              <CardTitle>Rich Book Data</CardTitle>
+              <CardDescription>
+                Access detailed book information including covers, descriptions, and publication details.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
       </div>
 
       {/* CTA Section */}
-      <Card className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <CardContent className="p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Start Your Reading Journey Today</h2>
-          <p className="mb-6 opacity-90">
-            Join thousands of readers who use BookShelf to discover, organize, and track their favorite books.
-          </p>
-          <Button asChild size="lg" variant="secondary">
-            <Link href="/search">Get Started</Link>
+      {!session && (
+        <div className="text-center py-16 bg-blue-50 rounded-2xl">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to start your reading journey?</h2>
+          <p className="text-xl text-gray-600 mb-8">Join BookShelf today and take control of your reading habits.</p>
+          <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/auth/signin">Sign Up Now</Link>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }

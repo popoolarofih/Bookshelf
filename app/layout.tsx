@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/components/auth-provider"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "BookShelf - Personal Book Tracker",
   description: "Track your reading journey with BookShelf",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -25,11 +26,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className={montserrat.className}>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-          <Navigation />
-          <main className="container mx-auto px-4 py-8">{children}</main>
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+            <Navigation />
+            <main className="container mx-auto px-4 py-8">{children}</main>
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   )

@@ -1,115 +1,62 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Library, Filter, Loader2, AlertCircle, RefreshCw } from "lucide-react"
+import { useEffect, useState } from "react"
+import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Library, Loader2, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { BookCard } from "@/components/book-card"
 
-interface ShelfBook {
+interface Book {
   id: string
   googleId: string
   title: string
   author: string
   imageUrl?: string
-  description?: string
-  publishedDate?: string
-  pageCount?: number
-  status: "read" | "currently_reading" | "want_to_read"
+  status: string
   createdAt: string
 }
 
-const statusLabels = {
-  read: "Read",
-  currently_reading: "Currently Reading",
-  want_to_read: "Want to Read",
-}
+const statusOptions = [
+  { value: "all", label: "All Books" },
+  { value: "want_to_read", label: "Want to Read" },
+  { value: "currently_reading", label: "Currently Reading" },
+  { value: "read", label: "Read" },
+]
 
 const statusColors = {
-  read: "status-read",
-  currently_reading: "status-currently-reading",
-  want_to_read: "status-want-to-read",
+  want_to_read: "bg-blue-100 text-blue-800",
+  currently_reading: "bg-yellow-100 text-yellow-800",
+  read: "bg-green-100 text-green-800",
 }
 
 export default function ShelfPage() {
-  const [books, setBooks] = useState<ShelfBook[]>([])
-  const [filteredBooks, setFilteredBooks] = useState<ShelfBook[]>([])
+  const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<string>("all")
+  const [filter, setFilter] = useState("all")
+  const [updatingBook, setUpdatingBook] = useState<string | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBooks()
-  }, [])
-
-  useEffect(() => {
-    if (filter === "all") {
-      setFilteredBooks(books)
-    } else {
-      setFilteredBooks(books.filter((book) => book.status === filter))
-    }
-  }, [books, filter])
-
-  const setupDatabase = async () => {
+  const fetchBooks = async () => {
     try {
-      const response = await fetch("/api/setup", {
-        method: "POST",
-      })
+      const response = await fetch("/api/books")
+      const data = await response.json()
 
       if (response.ok) {
-        toast({
-          title: "Database setup completed",
-          description: "Your database has been initialized successfully.",
-        })
-        // Retry fetching books
-        fetchBooks()
+        setBooks(data)
       } else {
         toast({
-          title: "Setup failed",
-          description: "Failed to set up the database. Please try again.",
+          title: "Failed to load books",
+          description: data.error || "An error occurred",
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "Setup failed",
-        description: "An error occurred during database setup.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const fetchBooks = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const response = await fetch("/api/books")
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("API Error:", errorText)
-
-        if (errorText.includes("does not exist")) {
-          setError("database_not_setup")
-          return
-        }
-
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      const data = await response.json()
-      setBooks(data)
-    } catch (error) {
-      console.error("Fetch error:", error)
-      setError("fetch_failed")
-      toast({
         title: "Failed to load books",
-        description: "There was an error loading your shelf. Please try again.",
+        description: "An error occurred while loading your books",
         variant: "destructive",
       })
     } finally {
@@ -118,6 +65,7 @@ export default function ShelfPage() {
   }
 
   const updateBookStatus = async (bookId: string, newStatus: string) => {
+    setUpdatingBook(bookId)
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: "PATCH",
@@ -128,10 +76,10 @@ export default function ShelfPage() {
       })
 
       if (response.ok) {
-        setBooks(books.map((book) => (book.id === bookId ? { ...book, status: newStatus as any } : book)))
+        setBooks(books.map((book) => (book.id === bookId ? { ...book, status: newStatus } : book)))
         toast({
           title: "Status updated",
-          description: `Book status changed to ${statusLabels[newStatus as keyof typeof statusLabels]}`,
+          description: "Book status has been updated successfully",
         })
       } else {
         const data = await response.json()
@@ -147,10 +95,12 @@ export default function ShelfPage() {
         description: "An error occurred while updating the book status",
         variant: "destructive",
       })
+    } finally {
+      setUpdatingBook(null)
     }
   }
 
-  const removeBook = async (bookId: string) => {
+  const deleteBook = async (bookId: string) => {
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: "DELETE",
@@ -160,7 +110,7 @@ export default function ShelfPage() {
         setBooks(books.filter((book) => book.id !== bookId))
         toast({
           title: "Book removed",
-          description: "The book has been removed from your shelf",
+          description: "Book has been removed from your shelf",
         })
       } else {
         const data = await response.json()
@@ -179,160 +129,135 @@ export default function ShelfPage() {
     }
   }
 
-  const getStatusCounts = () => {
-    return {
-      all: books.length,
-      read: books.filter((b) => b.status === "read").length,
-      currently_reading: books.filter((b) => b.status === "currently_reading").length,
-      want_to_read: books.filter((b) => b.status === "want_to_read").length,
+  useEffect(() => {
+    fetchBooks()
+  }, [])
+
+  const filteredBooks = filter === "all" ? books : books.filter((book) => book.status === filter)
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "want_to_read":
+        return "Want to Read"
+      case "currently_reading":
+        return "Currently Reading"
+      case "read":
+        return "Read"
+      default:
+        return status
     }
   }
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600 mb-4" />
-        <p className="text-gray-600">Loading your shelf...</p>
-      </div>
+      <AuthGuard>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-sm text-muted-foreground">Loading your books...</p>
+          </div>
+        </div>
+      </AuthGuard>
     )
   }
-
-  if (error === "database_not_setup") {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Alert className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            It looks like your database hasn't been set up yet. Click the button below to initialize your BookShelf
-            database.
-          </AlertDescription>
-        </Alert>
-
-        <Card className="text-center py-12">
-          <CardContent>
-            <Library className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <CardTitle className="text-gray-600 mb-2">Database Setup Required</CardTitle>
-            <CardDescription className="mb-6">
-              Your BookShelf database needs to be initialized before you can start adding books.
-            </CardDescription>
-            <Button onClick={setupDatabase} className="bg-blue-600 hover:bg-blue-700">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Set Up Database
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error === "fetch_failed") {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card className="text-center py-12">
-          <CardContent>
-            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <CardTitle className="text-gray-600 mb-2">Failed to Load Shelf</CardTitle>
-            <CardDescription className="mb-6">
-              There was an error loading your book shelf. Please try again.
-            </CardDescription>
-            <Button onClick={fetchBooks} className="bg-blue-600 hover:bg-blue-700">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const statusCounts = getStatusCounts()
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4">My Shelf</h1>
-        <p className="text-gray-600 mb-6">Manage and track your personal book collection</p>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="book-card">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{statusCounts.all}</div>
-              <div className="text-sm text-gray-600">Total Books</div>
-            </CardContent>
-          </Card>
-          <Card className="book-card">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{statusCounts.read}</div>
-              <div className="text-sm text-gray-600">Read</div>
-            </CardContent>
-          </Card>
-          <Card className="book-card">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{statusCounts.currently_reading}</div>
-              <div className="text-sm text-gray-600">Reading</div>
-            </CardContent>
-          </Card>
-          <Card className="book-card">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{statusCounts.want_to_read}</div>
-              <div className="text-sm text-gray-600">Want to Read</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filter */}
-        <div className="flex items-center gap-4 mb-6">
-          <Filter className="h-5 w-5 text-gray-500" />
+    <AuthGuard>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Shelf</h1>
+            <p className="text-gray-600">Manage your personal book collection</p>
+          </div>
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Books ({statusCounts.all})</SelectItem>
-              <SelectItem value="read">Read ({statusCounts.read})</SelectItem>
-              <SelectItem value="currently_reading">Currently Reading ({statusCounts.currently_reading})</SelectItem>
-              <SelectItem value="want_to_read">Want to Read ({statusCounts.want_to_read})</SelectItem>
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Books Grid */}
-      {filteredBooks.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
+        {filteredBooks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredBooks.map((book) => (
+              <Card key={book.id} className="h-full">
+                <CardHeader>
+                  <div className="flex gap-4">
+                    {book.imageUrl && (
+                      <img
+                        src={book.imageUrl || "/placeholder.svg"}
+                        alt={book.title}
+                        className="w-16 h-24 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <CardTitle className="text-lg line-clamp-2">{book.title}</CardTitle>
+                      <CardDescription className="mt-1">{book.author}</CardDescription>
+                      <Badge
+                        className={`mt-2 ${statusColors[book.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}`}
+                      >
+                        {getStatusLabel(book.status)}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Select
+                      value={book.status}
+                      onValueChange={(value) => updateBookStatus(book.id, value)}
+                      disabled={updatingBook === book.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="want_to_read">Want to Read</SelectItem>
+                        <SelectItem value="currently_reading">Currently Reading</SelectItem>
+                        <SelectItem value="read">Read</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteBook(book.id)}
+                      className="w-full text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
             <Library className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <CardTitle className="text-gray-600 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               {filter === "all"
-                ? "Your shelf is empty"
-                : `No ${statusLabels[filter as keyof typeof statusLabels]?.toLowerCase()} books`}
-            </CardTitle>
-            <CardDescription className="mb-4">
+                ? "No books in your shelf"
+                : `No ${statusOptions.find((s) => s.value === filter)?.label.toLowerCase()} books`}
+            </h3>
+            <p className="text-gray-600 mb-4">
               {filter === "all"
-                ? "Start building your library by searching for books to add"
-                : `You don't have any books marked as ${statusLabels[filter as keyof typeof statusLabels]?.toLowerCase()}`}
-            </CardDescription>
+                ? "Start building your collection by searching for books"
+                : "Try changing the filter or add some books to your shelf"}
+            </p>
             {filter === "all" && (
-              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Button asChild>
                 <a href="/search">Search Books</a>
               </Button>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBooks.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onStatusChange={(newStatus) => updateBookStatus(book.id, newStatus)}
-              onRemove={() => removeBook(book.id)}
-              showShelfActions={true}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </AuthGuard>
   )
 }

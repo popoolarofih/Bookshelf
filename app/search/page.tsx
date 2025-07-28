@@ -1,14 +1,13 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { Search, Loader2 } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Search, Plus, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { BookCard } from "@/components/book-card"
 
 interface Book {
   id: string
@@ -17,8 +16,7 @@ interface Book {
     authors?: string[]
     description?: string
     imageLinks?: {
-      thumbnail?: string
-      smallThumbnail?: string
+      thumbnail: string
     }
     publishedDate?: string
     pageCount?: number
@@ -29,11 +27,10 @@ export default function SearchPage() {
   const [query, setQuery] = useState("")
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [addingBook, setAddingBook] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const searchBooks = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const searchBooks = async () => {
     if (!query.trim()) return
 
     setLoading(true)
@@ -43,7 +40,6 @@ export default function SearchPage() {
 
       if (response.ok) {
         setBooks(data.items || [])
-        setSearched(true)
       } else {
         toast({
           title: "Search failed",
@@ -62,7 +58,8 @@ export default function SearchPage() {
     }
   }
 
-  const addToShelf = async (book: Book, status = "want_to_read") => {
+  const addToShelf = async (book: Book) => {
+    setAddingBook(book.id)
     try {
       const response = await fetch("/api/books", {
         method: "POST",
@@ -73,11 +70,11 @@ export default function SearchPage() {
           googleId: book.id,
           title: book.volumeInfo.title,
           author: book.volumeInfo.authors?.join(", ") || "Unknown Author",
-          imageUrl: book.volumeInfo.imageLinks?.thumbnail || book.volumeInfo.imageLinks?.smallThumbnail,
-          description: book.volumeInfo.description,
-          publishedDate: book.volumeInfo.publishedDate,
-          pageCount: book.volumeInfo.pageCount,
-          status,
+          imageUrl: book.volumeInfo.imageLinks?.thumbnail || "",
+          description: book.volumeInfo.description || "",
+          publishedDate: book.volumeInfo.publishedDate || "",
+          pageCount: book.volumeInfo.pageCount || 0,
+          status: "want_to_read",
         }),
       })
 
@@ -86,7 +83,7 @@ export default function SearchPage() {
       if (response.ok) {
         toast({
           title: "Book added!",
-          description: `"${book.volumeInfo.title}" has been added to your shelf.`,
+          description: `"${book.volumeInfo.title}" has been added to your shelf`,
         })
       } else {
         toast({
@@ -101,83 +98,87 @@ export default function SearchPage() {
         description: "An error occurred while adding the book",
         variant: "destructive",
       })
+    } finally {
+      setAddingBook(null)
     }
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4">Search Books</h1>
-        <p className="text-gray-600 mb-6">Discover your next great read from millions of books</p>
+    <AuthGuard>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Search Books</h1>
+          <p className="text-gray-600">Discover new books to add to your collection</p>
+        </div>
 
-        <form onSubmit={searchBooks} className="flex gap-4 max-w-2xl">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <div className="mb-8">
+          <div className="flex gap-4">
             <Input
-              type="text"
-              placeholder="Search for books, authors, or ISBN..."
+              placeholder="Search for books..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-10 h-12 border-blue-200 focus:border-blue-400"
+              onKeyPress={(e) => e.key === "Enter" && searchBooks()}
+              className="flex-1"
             />
+            <Button onClick={searchBooks} disabled={loading || !query.trim()}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              Search
+            </Button>
           </div>
-          <Button type="submit" disabled={loading || !query.trim()} className="h-12 px-8 bg-blue-600 hover:bg-blue-700">
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Search
-              </>
-            )}
-          </Button>
-        </form>
-      </div>
-
-      {/* Results */}
-      {loading && (
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600 mb-4" />
-          <p className="text-gray-600">Searching for books...</p>
         </div>
-      )}
 
-      {searched && !loading && books.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <CardTitle className="text-gray-600 mb-2">No books found</CardTitle>
-            <CardDescription>Try searching with different keywords or check your spelling</CardDescription>
-          </CardContent>
-        </Card>
-      )}
-
-      {books.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-blue-900">Search Results ({books.length} books)</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {books.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {books.map((book) => (
-              <BookCard
-                key={book.id}
-                book={{
-                  id: book.id,
-                  title: book.volumeInfo.title,
-                  author: book.volumeInfo.authors?.join(", ") || "Unknown Author",
-                  imageUrl: book.volumeInfo.imageLinks?.thumbnail || book.volumeInfo.imageLinks?.smallThumbnail,
-                  description: book.volumeInfo.description,
-                  publishedDate: book.volumeInfo.publishedDate,
-                  pageCount: book.volumeInfo.pageCount,
-                }}
-                onAddToShelf={(status) => addToShelf(book, status)}
-                showAddButton={true}
-              />
+              <Card key={book.id} className="h-full">
+                <CardHeader>
+                  <div className="flex gap-4">
+                    {book.volumeInfo.imageLinks?.thumbnail && (
+                      <img
+                        src={book.volumeInfo.imageLinks.thumbnail || "/placeholder.svg"}
+                        alt={book.volumeInfo.title}
+                        className="w-16 h-24 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <CardTitle className="text-lg line-clamp-2">{book.volumeInfo.title}</CardTitle>
+                      <CardDescription className="mt-1">
+                        {book.volumeInfo.authors?.join(", ") || "Unknown Author"}
+                      </CardDescription>
+                      {book.volumeInfo.publishedDate && (
+                        <Badge variant="secondary" className="mt-2">
+                          {new Date(book.volumeInfo.publishedDate).getFullYear()}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {book.volumeInfo.description && (
+                    <p className="text-sm text-gray-600 line-clamp-3 mb-4">{book.volumeInfo.description}</p>
+                  )}
+                  <Button onClick={() => addToShelf(book)} disabled={addingBook === book.id} className="w-full">
+                    {addingBook === book.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Add to Shelf
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {!loading && books.length === 0 && query && (
+          <div className="text-center py-12">
+            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No books found</h3>
+            <p className="text-gray-600">Try searching with different keywords</p>
+          </div>
+        )}
+      </div>
+    </AuthGuard>
   )
 }

@@ -1,36 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
 import { createClient } from "@supabase/supabase-js"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-// Mock user ID for demo purposes
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
-
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const body = await request.json()
-    const { status } = body
+    const session = await getServerSession()
 
-    const { data, error } = await supabase
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get user from database
+    const { data: user } = await supabase.from("users").select("id").eq("email", session.user.email).single()
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    const { status } = await request.json()
+    const bookId = params.id
+
+    const { data: book, error } = await supabase
       .from("books")
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-      .eq("user_id", DEMO_USER_ID)
-      .select(`
-        id,
-        google_id,
-        title,
-        author,
-        image_url,
-        description,
-        published_date,
-        page_count,
-        status,
-        created_at
-      `)
+      .update({ status })
+      .eq("id", bookId)
+      .eq("user_id", user.id)
+      .select()
       .single()
 
     if (error) {
@@ -38,43 +35,55 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "Failed to update book" }, { status: 500 })
     }
 
-    if (!data) {
+    if (!book) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 })
     }
 
-    // Transform the response
-    const transformedData = {
-      id: data.id,
-      googleId: data.google_id,
-      title: data.title,
-      author: data.author,
-      imageUrl: data.image_url,
-      description: data.description,
-      publishedDate: data.published_date,
-      pageCount: data.page_count,
-      status: data.status,
-      createdAt: data.created_at,
+    // Transform snake_case to camelCase
+    const transformedBook = {
+      id: book.id,
+      googleId: book.google_id,
+      title: book.title,
+      author: book.author,
+      imageUrl: book.image_url,
+      status: book.status,
+      createdAt: book.created_at,
     }
 
-    return NextResponse.json(transformedData)
+    return NextResponse.json(transformedBook)
   } catch (error) {
-    console.error("Server error:", error)
+    console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await supabase.from("books").delete().eq("id", params.id).eq("user_id", DEMO_USER_ID)
+    const session = await getServerSession()
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get user from database
+    const { data: user } = await supabase.from("users").select("id").eq("email", session.user.email).single()
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    const bookId = params.id
+
+    const { error } = await supabase.from("books").delete().eq("id", bookId).eq("user_id", user.id)
 
     if (error) {
       console.error("Database error:", error)
       return NextResponse.json({ error: "Failed to delete book" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ message: "Book deleted successfully" })
   } catch (error) {
-    console.error("Server error:", error)
+    console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
