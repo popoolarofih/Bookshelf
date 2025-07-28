@@ -1,0 +1,33 @@
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create book status enum
+CREATE TYPE book_status AS ENUM ('READ', 'currently_reading', 'want_to_read');
+
+-- Create books table
+CREATE TABLE IF NOT EXISTS books (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    google_id VARCHAR(255) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    author VARCHAR(500),
+    image_url TEXT,
+    description TEXT,
+    published_date VARCHAR(50),
+    page_count INTEGER,
+    status book_status DEFAULT 'want_to_read',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, google_id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_books_user_id ON books(user_id);
+CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
+CREATE INDEX IF NOT EXISTS idx_books_google_id ON books(google_id);
